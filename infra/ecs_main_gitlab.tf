@@ -418,9 +418,9 @@ resource "aws_instance" "gitlab" {
   availability_zone = "${var.aws_availability_zones[0]}"
 
   vpc_security_group_ids      = ["${aws_security_group.gitlab-ec2.id}"]
-  associate_public_ip_address = "false"
+  associate_public_ip_address = true
   key_name                    = "michal"
-  subnet_id                   = "${aws_subnet.private_with_egress.*.id[0]}"
+  subnet_id                   = "${aws_subnet.public.*.id[0]}"
   user_data                   = <<EOF
   #!/bin/bash
   echo ECS_CLUSTER=${aws_ecs_cluster.main_cluster.id} >> /etc/ecs/ecs.config
@@ -456,6 +456,10 @@ resource "aws_ebs_volume" "gitlab" {
   size              = 256
   encrypted         = true
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   tags = {
     Name = "${var.prefix}-gitlab"
   }
@@ -474,4 +478,33 @@ resource "aws_eip" "gitlab" {
     # VPN routing may depend on this
     prevent_destroy = true
   }
+}
+
+##############################
+
+resource "aws_autoscaling_group" "gitlab_runner" {
+  name_prefix               = "${var.prefix}-gitlab-runner-"
+  max_size                  = 2
+  min_size                  = 1
+  desired_capacity          = 1
+  health_check_grace_period = 120
+  health_check_type         = "EC2"
+  launch_configuration      = "${aws_launch_configuration.gitlab_runner.name}"
+  vpc_zone_identifier       = ["${aws_subnet.public.*.id}"]
+
+  tags = [{
+    key                 = "Name"
+    value               = "${var.prefix}-gitlab-runner-asg"
+    propagate_at_launch = true
+  }]
+}
+
+resource "aws_launch_configuration" "gitlab_runner" {
+  name_prefix     = "${var.prefix}-gitlab-runner-"
+  image_id        = "ami-0749bd3fac17dc2cc"
+  instance_type   = "t3a.medium"
+  security_groups = ["${aws_security_group.gitlab_runner.id}"]
+  key_name        = "michal"
+
+  associate_public_ip_address = true
 }

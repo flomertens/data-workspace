@@ -850,6 +850,20 @@ resource "aws_security_group_rule" "gitlab_service_egress_https_to_everwhere" {
   protocol    = "tcp"
 }
 
+# Temporary to get apt-get working
+resource "aws_security_group_rule" "gitlab_service_egress_http_to_everwhere" {
+  description = "egress-http-to-everywhere"
+
+  security_group_id = "${aws_security_group.gitlab_service.id}"
+  cidr_blocks       = ["0.0.0.0/0"]
+
+  type        = "egress"
+  from_port   = "80"
+  to_port     = "80"
+  protocol    = "tcp"
+}
+
+
 resource "aws_security_group_rule" "gitlab_service_egress_postgres_to_gitlab_db" {
   description = "egress-postgres-to-gitlab-db"
 
@@ -949,5 +963,68 @@ resource "aws_security_group_rule" "gitlab-ec2-egress-all" {
   type        = "egress"
   from_port   = "0"
   to_port     = "65535"
+  protocol    = "tcp"
+}
+
+resource "aws_security_group_rule" "gitlab-ec2-ingress-ssh" {
+  description = "egress-ssh"
+
+  security_group_id = "${aws_security_group.gitlab-ec2.id}"
+  cidr_blocks = ["0.0.0.0/0"]
+
+  type        = "ingress"
+  from_port   = "22"
+  to_port     = "22"
+  protocol    = "tcp"
+}
+
+resource "aws_security_group" "gitlab_runner" {
+  name        = "${var.prefix}-gitlab-runner"
+  description = "${var.prefix}-gitlab-runner"
+  vpc_id      = "${aws_vpc.main.id}"
+
+  tags {
+    Name = "${var.prefix}-gitlab-runner"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "gitlab_runner_ingress_ssh" {
+  description = "ingress-ssh"
+
+  security_group_id = "${aws_security_group.gitlab_runner.id}"
+  cidr_blocks = ["0.0.0.0/0"]
+
+  type        = "ingress"
+  from_port   = "22"
+  to_port     = "22"
+  protocol    = "tcp"
+}
+
+# Yum seems to do things on port 80
+resource "aws_security_group_rule" "gitlab_runner_egress_http" {
+  description = "egress-http"
+
+  security_group_id = "${aws_security_group.gitlab_runner.id}"
+  cidr_blocks = ["0.0.0.0/0"]
+
+  type        = "egress"
+  from_port   = "80"
+  to_port     = "80"
+  protocol    = "tcp"
+}
+
+resource "aws_security_group_rule" "gitlab_runner_egress_https" {
+  description = "egress-https"
+
+  security_group_id = "${aws_security_group.gitlab_runner.id}"
+  cidr_blocks = ["0.0.0.0/0"]
+
+  type        = "egress"
+  from_port   = "443"
+  to_port     = "443"
   protocol    = "tcp"
 }
