@@ -19,6 +19,7 @@ class ApplicationTemplate(TimeStampedModel):
     )
     visible = models.BooleanField(default=True, null=False)
     host_exact = models.CharField(max_length=128, blank=True, null=False)
+    host_pattern = None
     nice_name = models.CharField(
         verbose_name='application',
         validators=[RegexValidator(regex=r'^[a-zA-Z0-9\- ]+$')],
